@@ -25,3 +25,10 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         validated_data.pop('confirm_password')
         user = User.objects.create_user(**validated_data)
         return user
+    
+
+class GetAllUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = '__all__'
+

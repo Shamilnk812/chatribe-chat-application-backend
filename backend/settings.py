@@ -38,12 +38,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'users',
-    'chat',
     'corsheaders',
+    'channels',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
-]
+    'users',
+    'chat',
+]  
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -77,6 +78,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'backend.wsgi.application'
+ASGI_APPLICATION = "backend.asgi.application"
 
 
 # Database
@@ -131,6 +133,17 @@ CORS_ORIGIN_ALLOW_ALL = True
 #     "http://localhost:5173",
 #     "http://127.0.0.1:5173",
 # ]
+
+
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("localhost", 6379)],
+        },
+    },
+}
 
 
 REST_FRAMEWORK = {

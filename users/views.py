@@ -7,6 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth import authenticate
+from django.db.models import Q
 
 from .models import User
 from .serializers import *
@@ -81,3 +82,19 @@ class UserLogoutView(generics.GenericAPIView):
         
         except TokenError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)   
+
+
+
+# ----------------------- Get all users ---------------
+
+class GetAllUsersView(generics.ListAPIView):
+    serializer_class = GetAllUserSerializer
+
+    def get_queryset(self):
+        user_id = self.kwargs.get("user_id")
+        search_query = self.request.query_params.get('search', '').strip()
+        queryset = User.objects.exclude(Q(id=user_id) | Q(is_superuser=True))
+
+        if search_query :
+            queryset = queryset.filter(username__icontains=search_query)
+        return queryset    
