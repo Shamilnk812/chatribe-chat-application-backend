@@ -6,8 +6,10 @@ import traceback
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
 from .models import * 
-from .serializers import ChatRoomSerializer,MessageSerializer
+from django.utils.timezone import now
+from .serializers import ChatRoomSerializer,MessageSerializer,InterestRequestSerializer
 from django.db.models import Q
+from .signals import send_real_time_notification
 
 
 
@@ -83,6 +85,130 @@ class GetMessagesView(APIView):
         
         except ChatRooms.DoesNotExist:
             return Response({'detail': 'Chat room does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+class SendInterestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        
+        receiver_id = request.data.get('receiver_id')
+
+        if not receiver_id :
+            return Response({'error': 'Receiver ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if request.user.id == receiver_id :
+            return Response({'error': 'Cannot send interest to yourself'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            receiver = User.objects.get(id=receiver_id)
+
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        existing_request = InterestRequest.objects.filter(
+            sender = request.user,
+            receiver = receiver
+        ).first()
+
+        if existing_request :
+            existing_request.status = 'pending'
+            existing_request.save()
+            serializer = InterestRequestSerializer(existing_request)
+
+            send_real_time_notification(
+                receiver.id,
+                {
+                    "type": "interest_notification",
+                    "content": f"{request.user.username} sent you an interest request.",
+                    "username": f"{request.user.username}",
+                    "timestamp": now().isoformat(),
+                }
+            )
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        
+
+        interest_request = InterestRequest.objects.create(
+            sender=request.user,
+            receiver=receiver,
+            status="pending"
+        )
+
+        send_real_time_notification(
+                receiver.id,
+                {
+                    "type": "interest_notification",
+                    "content": f"{request.user.username} sent you an interest request.",
+                    "username": f"{request.user.username}",
+                    "timestamp": now().isoformat(),
+                }
+            )
+        serializer = InterestRequestSerializer(interest_request)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+
+
+class HandleInterestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        request_id = request.data.get('interest_id')
+        action = request.data.get('action')  
+        print('req', request)
+        print('actio',action)
+        
+        if action not in ['accepted', 'rejected']:
+            return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            interest_request = InterestRequest.objects.get(
+                id=request_id,
+                receiver=request.user,
+            )
+        except InterestRequest.DoesNotExist:
+            return Response({'error': 'Interest request not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+
+        interest_request.status = action
+        interest_request.save()
+
+        # Prepare the message content
+        content_map = {
+            "accepted": f"{interest_request.receiver.username} accepted your interest request.",
+            "rejected": f"{interest_request.receiver.username} rejected your interest request.",
+        }
+
+        notification_payload = {
+            "type": "interest_notification",
+            "content": content_map[action],
+            "username": f"{interest_request.receiver.username}",
+            "timestamp": now().isoformat(),
+        }
+
+       
+        send_real_time_notification(interest_request.sender.id, notification_payload)
+
+        return Response({'message': f'Interest request {action}'}, status=status.HTTP_200_OK)
+        
+
+
+class ListInterestRequestsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        pending_requests = InterestRequest.objects.filter(
+            receiver=request.user,
+            status='pending'
+        ).order_by('-created_at')
+        
+        serializer = InterestRequestSerializer(pending_requests, many=True)
+        return Response(serializer.data)
+
+
+
 
 
 

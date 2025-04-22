@@ -97,4 +97,10 @@ class GetAllUsersView(generics.ListAPIView):
 
         if search_query :
             queryset = queryset.filter(username__icontains=search_query)
-        return queryset    
+        return queryset     
+    
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['user_id'] = self.kwargs.get("user_id")  
+        return context

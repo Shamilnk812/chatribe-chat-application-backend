@@ -1,0 +1,65 @@
+from django.db.models.signals import post_save,pre_save
+from django.dispatch import receiver
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from .models import *
+
+
+
+
+# Utility Function for Creating Notifications
+# def create_notification(user,message,link=None) :
+#     Notification.objects.create(
+#         user=user,
+#         message="new one",
+#         message2= message,
+#         link=link
+#     )
+#     send_real_time_notification(user.id,message)
+
+
+
+# Utility Function for Real-Time Notifications
+
+
+def send_real_time_notification(user_id,message) :
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'notifications_{user_id}',
+        {
+            'type':'notification_message',
+            'message':message
+        }
+    )
+
+
+
+# -------------------- Chat Notifications ---------------
+
+@receiver(post_save, sender=Messages)
+def notify_recipient_on_new_message(sender, instance, created, **kwargs):
+   
+    if created:
+
+        chat_room = instance.chat_room
+        sender_user = instance.user
+        print(chat_room)
+
+        recipient_user = (
+            chat_room.user2 if chat_room.user1 == sender_user else chat_room.user1
+        )
+    
+        
+        chat_room.last_message_timestamp = instance.timestamp
+        chat_room.save()
+
+       
+        message_content = {
+            "type": "chat_notification",
+            "content": instance.content,
+            "username": f"{sender_user.username}",
+            "timestamp": instance.timestamp.isoformat(),
+        }
+        send_real_time_notification(recipient_user.id, message_content) 
+
+      

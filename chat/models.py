@@ -42,3 +42,22 @@ class Messages(models.Model):
     def __str__(self) -> str:
         return f'Message by {self.user.username} at {self.timestamp}'
 
+
+
+class InterestRequest(models.Model):
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_interests')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_interests')
+    status = models.CharField(max_length=10, choices=[('pending', 'Pending'), ('accepted', 'Accepted'), ('rejected', 'Rejected')], default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['sender', 'receiver'], name='unique_interest_request')
+        ]
+
+    def __str__(self):
+        return f"{self.sender.username} → {self.receiver.username} ({self.status})"
+    
+
+    

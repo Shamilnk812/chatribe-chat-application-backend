@@ -4,3 +4,4 @@ from .models import *
 
 admin.site.register(ChatRooms)
 admin.site.register(Messages)
+admin.site.register(InterestRequest)

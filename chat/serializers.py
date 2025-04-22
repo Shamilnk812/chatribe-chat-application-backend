@@ -27,3 +27,13 @@ class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Messages
         fields = ['id', 'chat_room', 'user', 'content', 'timestamp', 'seen']
+
+
+class InterestRequestSerializer(serializers.ModelSerializer):
+    sender = GetAllUserSerializer(read_only=True)
+    receiver = GetAllUserSerializer(read_only=True)
+    
+    class Meta:
+        model = InterestRequest
+        fields = ['id', 'sender', 'receiver', 'status', 'created_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
