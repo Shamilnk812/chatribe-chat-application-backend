@@ -31,7 +31,7 @@ DEBUG = config('DEBUG', cast=bool)
 
 # DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'chatribe-chat-application-backend.onrender.com']
 
 
 # Application definition
