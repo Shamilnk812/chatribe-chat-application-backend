@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from decouple import config
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -97,16 +98,19 @@ ASGI_APPLICATION = "backend.asgi.application"
 # }
 
 
+# DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.postgresql',
+#        'NAME': 'chatribe',
+#        'USER': 'postgres',
+#        'PASSWORD': '2445057',
+#        'HOST': 'localhost',
+#        'PORT': '5432',
+#    }
+# }   
 DATABASES = {
-   'default': {
-       'ENGINE': 'django.db.backends.postgresql',
-       'NAME': 'chatribe',
-       'USER': 'postgres',
-       'PASSWORD': '2445057',
-       'HOST': 'localhost',
-       'PORT': '5432',
-   }
-}   
+    'default': config('DATABASE_URL', cast=config.db)
+}
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -140,12 +144,32 @@ CORS_ORIGIN_ALLOW_ALL = True
 # ]
 
 
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
 
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("localhost", 6379)],
+            "hosts": [config('REDIS_URL')],
         },
     },
 }
