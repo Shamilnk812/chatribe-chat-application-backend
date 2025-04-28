@@ -32,7 +32,7 @@ DEBUG = config('DEBUG', cast=bool)
 
 # DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'chatribe-chat-application-backend.onrender.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'chatribe-chat-application-backend.onrender.com', 'chatribe-chat-application-frontend.vercel.app']
 
 
 # Application definition
@@ -138,10 +138,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",
-#     "http://127.0.0.1:5173",
-# ]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://chatribe-chat-application-frontend.vercel.app",
+]
 
 
 CORS_ALLOW_METHODS = [
