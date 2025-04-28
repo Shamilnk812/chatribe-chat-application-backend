@@ -124,17 +124,18 @@ class SendInterestView(APIView):
                     "content": f"{request.user.username} sent you an interest request.",
                     "username": f"{request.user.username}",
                     "timestamp": now().isoformat(),
+                    "updated_data": serializer.data,
                 }
             )
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        
 
         interest_request = InterestRequest.objects.create(
             sender=request.user,
             receiver=receiver,
             status="pending"
         )
+        serializer = InterestRequestSerializer(interest_request)
 
         send_real_time_notification(
                 receiver.id,
@@ -143,9 +144,10 @@ class SendInterestView(APIView):
                     "content": f"{request.user.username} sent you an interest request.",
                     "username": f"{request.user.username}",
                     "timestamp": now().isoformat(),
+                    "updated_data" : serializer.data,
                 }
             )
-        serializer = InterestRequestSerializer(interest_request)
+        
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -157,8 +159,6 @@ class HandleInterestView(APIView):
     def post(self, request):
         request_id = request.data.get('interest_id')
         action = request.data.get('action')  
-        print('req', request)
-        print('actio',action)
         
         if action not in ['accepted', 'rejected']:
             return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
@@ -174,6 +174,7 @@ class HandleInterestView(APIView):
 
         interest_request.status = action
         interest_request.save()
+        serializer = InterestRequestSerializer(interest_request)
 
         # Prepare the message content
         content_map = {
@@ -186,13 +187,16 @@ class HandleInterestView(APIView):
             "content": content_map[action],
             "username": f"{interest_request.receiver.username}",
             "timestamp": now().isoformat(),
+            "updated_data": serializer.data,
         }
 
        
         send_real_time_notification(interest_request.sender.id, notification_payload)
-
-        return Response({'message': f'Interest request {action}'}, status=status.HTTP_200_OK)
         
+        return Response(serializer.data, status=status.HTTP_200_OK)
+            
+
+
 
 
 class ListInterestRequestsView(APIView):

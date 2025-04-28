@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+from decouple import config
 from pathlib import Path
 from datetime import timedelta
 
@@ -21,10 +22,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-hf7tn$ritu14^zehxn3*fvhwf-wl8@vn921c5n)wu8zv&v#^-7'
+# SECRET_KEY = 'django-insecure-hf7tn$ritu14^zehxn3*fvhwf-wl8@vn921c5n)wu8zv&v#^-7'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+
+SECRET_KEY = config('SECRET_KEY')
+DEBUG = config('DEBUG', cast=bool)
+
+
+# DEBUG = True
 
 ALLOWED_HOSTS = []
 
