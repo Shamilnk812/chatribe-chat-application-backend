@@ -109,7 +109,7 @@ ASGI_APPLICATION = "backend.asgi.application"
 #    }
 # }   
 DATABASES = {
-    'default': config('DATABASE_URL', cast=config.db)
+    'default': dj_database_url.parse(config('DATABASE_URL'))
 }
 
 AUTH_USER_MODEL = 'users.User'
