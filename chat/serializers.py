@@ -5,21 +5,28 @@ from users.serializers import GetAllUserSerializer
 class ChatRoomSerializer(serializers.ModelSerializer):
     user1 = GetAllUserSerializer(read_only=True)
     user2 = GetAllUserSerializer(read_only=True)
+    unread_count_user1 = serializers.SerializerMethodField()
+    unread_count_user2 = serializers.SerializerMethodField()
     # last_message = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatRooms
-        fields = ['id', 'user1', 'user2', 'created_at', 'last_message_timestamp']
+        fields = ['id', 'user1', 'user2', 'created_at', 'last_message_timestamp', 'unread_count_user1', 'unread_count_user2']
+    
+    
+    def get_unread_count_user1(self, obj):
+        user = self.context.get('user')
+        if user == obj.user1.id:
+            return obj.message.filter(seen=False).exclude(user=obj.user1).count()
+    
 
-    # def get_last_message(self, obj):
-    #     last_message = obj.messages.last()
-    #     if last_message:
-    #         return {
-    #             'content': last_message.content,
-    #             'timestamp': last_message.timestamp,
-    #             'seen': last_message.seen
-    #         }
-    #     return None
+    def get_unread_count_user2(self, obj):
+        user = self.context.get('user')
+        if user == obj.user2.id:
+            return obj.message.filter(seen=False).exclude(user=obj.user2).count()
+        
+
+
 
 class MessageSerializer(serializers.ModelSerializer):
     user = GetAllUserSerializer(read_only=True)

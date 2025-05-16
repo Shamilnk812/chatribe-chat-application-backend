@@ -61,6 +61,26 @@ class ListChatUsersView(APIView):
 
 
 
+class GetSingleChatUserView(APIView):
+
+    def get(self, request, chat_room_id):
+        try:
+            print('cccccchat room id',chat_room_id)
+            user_id = request.user.id
+            print('user id', user_id) 
+
+            chat_room = ChatRooms.objects.get(
+                Q(user1_id = user_id) | Q(user2_id = user_id),
+                id=chat_room_id
+            )
+            serializer = ChatRoomSerializer(chat_room, context={'user': user_id})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        except ChatRooms.DoesNotExist:
+            return ChatRooms.objects.none()
+
+
+
 class GetMessagesView(APIView):
     permission_classes = [IsAuthenticated]
 

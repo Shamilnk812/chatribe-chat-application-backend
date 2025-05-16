@@ -98,19 +98,21 @@ ASGI_APPLICATION = "backend.asgi.application"
 # }
 
 
-# DATABASES = {
-#    'default': {
-#        'ENGINE': 'django.db.backends.postgresql',
-#        'NAME': 'chatribe',
-#        'USER': 'postgres',
-#        'PASSWORD': '2445057',
-#        'HOST': 'localhost',
-#        'PORT': '5432',
-#    }
-# }   
 DATABASES = {
-    'default': dj_database_url.parse(config('DATABASE_URL'))
-}
+   'default': {
+       'ENGINE': 'django.db.backends.postgresql',
+       'NAME': 'chatribe',
+       'USER': 'postgres',
+       'PASSWORD': '2445057',
+       'HOST': 'localhost',
+       'PORT': '5432',
+   }
+}   
+
+
+# DATABASES = {
+#     'default': dj_database_url.parse(config('DATABASE_URL'))
+# }
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -166,14 +168,25 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [config('REDIS_URL')],
+#         },
+#     },
+# }
+
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [config('REDIS_URL')],
+            "hosts": [("127.0.0.1", 6379)],  # localhost and default redis port
         },
     },
 }
+
 
 
 REST_FRAMEWORK = {
