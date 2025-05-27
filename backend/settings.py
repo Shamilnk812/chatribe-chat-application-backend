@@ -98,21 +98,21 @@ ASGI_APPLICATION = "backend.asgi.application"
 # }
 
 
-DATABASES = {
-   'default': {
-       'ENGINE': 'django.db.backends.postgresql',
-       'NAME': 'chatribe',
-       'USER': 'postgres',
-       'PASSWORD': '2445057',
-       'HOST': 'localhost',
-       'PORT': '5432',
-   }
-}   
-
-
 # DATABASES = {
-#     'default': dj_database_url.parse(config('DATABASE_URL'))
-# }
+#    'default': {
+#        'ENGINE': 'django.db.backends.postgresql',
+#        'NAME': 'chatribe',
+#        'USER': 'postgres',
+#        'PASSWORD': '2445057',
+#        'HOST': 'localhost',
+#        'PORT': '5432',
+#    }
+# }   
+
+
+DATABASES = {
+    'default': dj_database_url.parse(config('DATABASE_URL'))
+}
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -138,7 +138,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ORIGIN_ALLOW_ALL = False
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -168,24 +168,24 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
-# CHANNEL_LAYERS = {
-#     "default": {
-#         "BACKEND": "channels_redis.core.RedisChannelLayer",
-#         "CONFIG": {
-#             "hosts": [config('REDIS_URL')],
-#         },
-#     },
-# }
-
-
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],  # localhost and default redis port
+            "hosts": [config('REDIS_URL')],
         },
     },
 }
+
+
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [("127.0.0.1", 6379)],  # localhost and default redis port
+#         },
+#     },
+# }
 
 
 
@@ -198,8 +198,8 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
      'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
      'REFRESH_TOKEN_LIFETIME': timedelta(days=14),
-     'ROTATE_REFRESH_TOKENS': True,
-     'BLACKLIST_AFTER_ROTATION': True
+     'ROTATE_REFRESH_TOKENS': False,
+     'BLACKLIST_AFTER_ROTATION': False
 }
 
 

@@ -7,11 +7,11 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     user2 = GetAllUserSerializer(read_only=True)
     unread_count_user1 = serializers.SerializerMethodField()
     unread_count_user2 = serializers.SerializerMethodField()
-    # last_message = serializers.SerializerMethodField()
+    last_message = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatRooms
-        fields = ['id', 'user1', 'user2', 'created_at', 'last_message_timestamp', 'unread_count_user1', 'unread_count_user2']
+        fields = ['id', 'user1', 'user2', 'created_at', 'last_message_timestamp', 'unread_count_user1', 'unread_count_user2', 'last_message']
     
     
     def get_unread_count_user1(self, obj):
@@ -24,6 +24,10 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         user = self.context.get('user')
         if user == obj.user2.id:
             return obj.message.filter(seen=False).exclude(user=obj.user2).count()
+
+    def get_last_message(self, obj):
+        last_message = obj.message.order_by('-timestamp').first()
+        return last_message.content if last_message else ""
         
 
 

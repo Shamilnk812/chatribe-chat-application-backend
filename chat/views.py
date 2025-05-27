@@ -8,11 +8,11 @@ from rest_framework.permissions import IsAuthenticated
 from .models import * 
 from django.utils.timezone import now
 from .serializers import ChatRoomSerializer,MessageSerializer,InterestRequestSerializer
-from django.db.models import Q
+from django.db.models import Q,F
 from .signals import send_real_time_notification
 
 
-
+#---------------- Create Chatroom -----------------
 class AddChatRoomView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -20,14 +20,12 @@ class AddChatRoomView(APIView):
         try:
             user_id1 = request.data.get('user_id1')
             user_id2 = request.data.get('user_id2')
-            print(user_id1, user_id2, '00000')
 
             if user_id1 == user_id2:
                 return Response({'error': 'Cannot create chat room with the same user.'}, status=status.HTTP_400_BAD_REQUEST)
             
             chat_rooms = ChatRooms.objects.filter(
                 Q(user1_id=user_id1, user2_id=user_id2) | Q(user1_id=user_id2, user2_id=user_id1)
-
             )
 
             if chat_rooms.exists() :
@@ -41,33 +39,31 @@ class AddChatRoomView(APIView):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         except Exception as e :
-            traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
+#----------------  List All Chat Rooms (Chat Users) for a Specific User --------------
 class ListChatUsersView(APIView):
     
     def get(self, request, user_id):
         try :
-            users = ChatRooms.objects.filter(Q(user1_id = user_id) | Q(user2_id = user_id)).order_by('-last_message_timestamp')
+            users = ChatRooms.objects.filter(Q(user1_id = user_id) | Q(user2_id = user_id)).order_by( F('last_message_timestamp').desc(nulls_last=True))
             if not users:
                 return Response({'message':'No chat rooms found '})
             serializer = ChatRoomSerializer(users, many = True, context={'user': user_id})
-            return Response(serializer.data) 
+            return Response(serializer.data,status=status.HTTP_200_OK) 
         
         except ChatRooms.DoesNotExist :
             return ChatRooms.objects.none()
 
 
 
+# ---------------- Retrieve a Single Chat Room (Chat User) by Room ID  ----------------
 class GetSingleChatUserView(APIView):
 
     def get(self, request, chat_room_id):
         try:
-            print('cccccchat room id',chat_room_id)
             user_id = request.user.id
-            print('user id', user_id) 
 
             chat_room = ChatRooms.objects.get(
                 Q(user1_id = user_id) | Q(user2_id = user_id),
@@ -81,13 +77,12 @@ class GetSingleChatUserView(APIView):
 
 
 
+# ---------------- Fetch all messages in a chat room  ---------------
 class GetMessagesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id1, user_id2):
-        print('user id 1', user_id1)
-        print('user id 2', user_id2)
-
+       
         try:
 
             chat_room = ChatRooms.objects.filter(
@@ -107,14 +102,13 @@ class GetMessagesView(APIView):
             return Response({'detail': 'Chat room does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
 
-
+#--------------- Send Interest Request --------------
 class SendInterestView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         
         receiver_id = request.data.get('receiver_id')
-
         if not receiver_id :
             return Response({'error': 'Receiver ID is required'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -123,56 +117,55 @@ class SendInterestView(APIView):
         
         try:
             receiver = User.objects.get(id=receiver_id)
-
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        existing_request = InterestRequest.objects.filter(
-            sender = request.user,
-            receiver = receiver
-        ).first()
+        # Create a new interest request or update an existing one
+        interest_request, created = self.create_or_update_interest_request(request.user, receiver)
+        
+        # Send real-time Interest request notification to the receiver
+        self.send_interest_notification(receiver.id,  request.user.username, interest_request)
+        
+        serializer = InterestRequestSerializer(interest_request)
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(serializer.data, status=status_code)
+    
 
+
+    def create_or_update_interest_request(self, sender, receiver):
+        """
+        Creates a new interest request if not exists, or updates the existing one to 'pending' status.
+
+        """
+        existing_request =  InterestRequest.objects.filter(sender=sender, receiver=receiver).first()
         if existing_request :
             existing_request.status = 'pending'
             existing_request.save()
-            serializer = InterestRequestSerializer(existing_request)
-
-            send_real_time_notification(
-                receiver.id,
-                {
-                    "type": "interest_notification",
-                    "content": f"{request.user.username} sent you an interest request.",
-                    "username": f"{request.user.username}",
-                    "timestamp": now().isoformat(),
-                    "updated_data": serializer.data,
-                }
-            )
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-        interest_request = InterestRequest.objects.create(
-            sender=request.user,
-            receiver=receiver,
-            status="pending"
-        )
-        serializer = InterestRequestSerializer(interest_request)
-
-        send_real_time_notification(
-                receiver.id,
-                {
-                    "type": "interest_notification",
-                    "content": f"{request.user.username} sent you an interest request.",
-                    "username": f"{request.user.username}",
-                    "timestamp": now().isoformat(),
-                    "updated_data" : serializer.data,
-                }
-            )
+            return existing_request, False
         
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        new_request = InterestRequest.objects.create(sender=sender, receiver=receiver, status='pending')
+        return new_request, True
+    
+
+    
+    def send_interest_notification(self, receiver_id, sender_username, interest_request):
+        """
+        Sends a notification to the receiver about the interest request.
+        """
+        serializer = InterestRequestSerializer(interest_request)
+        
+        message = {
+            "type": "interest_notification",
+            "content": f"{sender_username} sent you an interest request.",
+            "username": sender_username,
+            "timestamp": now().isoformat(),
+            "updated_data": serializer.data,
+        }
+        send_real_time_notification(receiver_id, message)
 
 
 
-
+# --------------- Handle Interest Request (Accept/Reject) ---------------
 class HandleInterestView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -180,6 +173,7 @@ class HandleInterestView(APIView):
         request_id = request.data.get('interest_id')
         action = request.data.get('action')  
         
+        # Validate the action
         if action not in ['accepted', 'rejected']:
             return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -191,7 +185,7 @@ class HandleInterestView(APIView):
         except InterestRequest.DoesNotExist:
             return Response({'error': 'Interest request not found'}, status=status.HTTP_404_NOT_FOUND)
         
-
+        # Update the status of the interest request
         interest_request.status = action
         interest_request.save()
         serializer = InterestRequestSerializer(interest_request)
@@ -210,19 +204,19 @@ class HandleInterestView(APIView):
             "updated_data": serializer.data,
         }
 
-       
+        # Send notification to the sender
         send_real_time_notification(interest_request.sender.id, notification_payload)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
             
 
 
-
-
+# --------------- List Pending Interest Requests ---------------
 class ListInterestRequestsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        # Fetch all pending interest requests received by the authenticated user, ordered by most recent
         pending_requests = InterestRequest.objects.filter(
             receiver=request.user,
             status='pending'

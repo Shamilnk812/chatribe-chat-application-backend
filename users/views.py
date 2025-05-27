@@ -20,11 +20,11 @@ from .serializers import *
 
 
 class UserRegisterView(generics.CreateAPIView):
+    
     permission_classes = [AllowAny]
     serializer_class = UserRegisterSerializer
 
     def post(self, request):
-        print('data is ',request.data)
         serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid():

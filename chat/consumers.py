@@ -13,12 +13,15 @@ from django.core.exceptions import ObjectDoesNotExist
 
 
 
+# -------------------- Chat --------------
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         try:
             self.request_user = self.scope['user']
             if self.request_user.is_authenticated:
+                # Get the ID of the user the current user is chatting with (from the URL)
                 self.chat_with_user = self.scope["url_route"]["kwargs"]["id"]
+                
                 user_ids = [int(self.request_user.id), int(self.chat_with_user)]
                 user_ids = sorted(user_ids)
                 self.room_group_name = f"chat_{user_ids[0]}-{user_ids[1]}"
@@ -70,7 +73,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "seen": result['seen'],
                 }
             )
-
+               
 
         except Exception as e:
             await self.send(text_data=json.dumps({"error": str(e)}))
@@ -85,7 +88,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             content=message_content,
             seen=False
         )
-     
+        
+        chat_room.last_message_timestamp = message.timestamp
+        chat_room.save(update_fields=["last_message_timestamp"])
+        
         return {
             'message_id': message.id,
             'timestamp': message.timestamp.isoformat(),  
@@ -134,9 +140,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         await self.send(text_data=json.dumps({
             "type": "message",
+            "chat_room_id": self.chat_room[0].id,
             "message_id": event['message_id'],
             "content": event['content'],
             "user": event['user'],  
+            "receiver_id": recipient_user_id,
             "timestamp": event['timestamp'],
             "seen": message_seen,
         }))
@@ -288,6 +296,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                     "type": "unread_count_update",
                     "chat_room_id": chat_room_id,
                     "sender_id": recipient_user_id,
+                    "username": "mark_as_read",
                     "unread_count": message_data['unread_count'],
                     "last_message": message_data['last_message_content'],
                     "timestamp": message_data['last_message_timestamp'],
@@ -318,13 +327,13 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
         last_message = Messages.objects.filter(chat_room_id=chat_room_id).order_by('-timestamp').first()
         last_message_content = last_message.content if last_message else None
-        last_message_timestamp = last_message.timestamp if last_message else None
+        last_message_timestamp = last_message.timestamp.isoformat() if last_message else None
         
 
         return {
             "unread_count": unread_count,
             "last_message_content": last_message_content,
-            "last_message_timestamp": last_message_timestamp.isoformat()
+            "last_message_timestamp": last_message_timestamp
         }
 
 
